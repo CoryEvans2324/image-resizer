@@ -18,11 +18,6 @@ def resize(f, size_scalar, save_params={}):
 	}
 
 	file_path, file_name = os.path.split(f)
-	file_path += '/resized_images'
-
-	if not os.path.exists(file_path):
-		os.mkdir(file_path)
-
 
 	old_im = Image.open(f)
 	tags = old_im.getexif()
