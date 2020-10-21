@@ -1,11 +1,16 @@
 import os
 import sys
 import math
+import optparse
 
 from PIL import Image
 
 
-def resize(f, size_scalar, save_params={}):
+def calc_other(l, size_x, size_y):
+    return math.floor(l * (size_x / size_y))
+
+
+def resize(f, width, height, save_params={}):
 
     orientation = {
         2: Image.FLIP_LEFT_RIGHT,
@@ -22,13 +27,20 @@ def resize(f, size_scalar, save_params={}):
     old_im = Image.open(f)
     tags = old_im.getexif()
 
-    exif_orientation = orientation.get(tags[0x0112])
+
+    orientation_tag = tags.get(0x0112, None)
+    exif_orientation = orientation.get(orientation_tag, None)
     if exif_orientation:
         old_im = old_im.transpose(exif_orientation)
 
+    if width > 0 and height <= 0:
+        height = calc_other(width, old_im.size[0], old_im.size[1])
+    elif height > 0 and width <= 0:
+        width = calc_other(height, old_im.size[1], old_im.size[0])
+
     size = (
-        math.floor(old_im.width * size_scalar),
-        math.floor(old_im.height * size_scalar)
+        math.floor(width),
+        math.floor(height)
     )
 
     new_im = old_im.resize(size)
@@ -42,25 +54,40 @@ def resize(f, size_scalar, save_params={}):
     new_im.save(new_file, **save_params)
 
 
-def print_usage():
-    print(sys.argv[0], '<size_scaler> <file> ...')
+def main():
 
-if len(sys.argv) < 3:
-    print_usage()
-    sys.exit(1)
+    save_params = {
+        'quality': 75,
+        'optimize': True
+    }
 
-try:
-    float(sys.argv[1])
-except:
-    print_usage()
-    sys.exit(1)
+    parser = optparse.OptionParser()
+    parser.add_option('--width', type=int, dest='width', default=0)
+    parser.add_option('--height', type=int, dest='height', default=0)
+    # parser.add_option('-f', '--file', metavar='FILE', dest='file')
 
-save_params = {
-    'quality': 75,
-    'optimize': True
-}
+    opt, args = parser.parse_args()
+    opt = vars(opt)
 
-size_scalar = float(sys.argv[1])
+    try:
+        width = opt['width']
+        height = opt['height']
+    except Exception as e:
+        print(e)
+        print('cannot parse width/height')
+        return 1
 
-for infile in sys.argv[2:]:
-    resize(infile, size_scalar, save_params)
+    if width <= 0 and height <= 0:
+        print('At least the new width or height needs to be specified')
+        return 1
+
+    # return resize(opt['file'], width, height, save_params)
+    for fpath in args:
+            if not os.path.isfile(fpath):
+                print('no file specified or not found')
+                continue
+            resize(fpath, width, height, save_params)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
