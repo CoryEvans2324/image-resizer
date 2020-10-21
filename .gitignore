@@ -2,5 +2,5 @@
 .env/
 images/
 
-.jpg
-.png
+*.jpg
+*.png
